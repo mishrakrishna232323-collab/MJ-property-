@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MJ Property</title>
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --primary:#8b5e3c;
+  --bg:#f5efe6;
+  --card:#fffaf5;
+}
+
+body{
+  margin:0;
+  font-family:'Inter',sans-serif;
+  background:var(--bg);
+}
+
+h1,h2,h3{
+  font-family:'Playfair Display',serif;
+}
+
+nav{
+  background:#fff;
+  padding:15px;
+  display:flex;
+  justify-content:space-between;
+  box-shadow:0 2px 5px rgba(0,0,0,0.1);
+}
+
+nav a{
+  text-decoration:none;
+  color:#333;
+  margin:0 10px;
+}
+
+.container{
+  padding:20px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+  gap:20px;
+}
+
+.card{
+  background:var(--card);
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 5px 15px rgba(0,0,0,0.1);
+  transition:0.3s;
+}
+
+.card:hover{
+  transform:translateY(-5px);
+}
+
+.card img{
+  width:100%;
+  height:180px;
+  object-fit:cover;
+}
+
+.btn{
+  background:var(--primary);
+  color:#fff;
+  padding:10px;
+  border:none;
+  cursor:pointer;
+  width:100%;
+}
+
+input,textarea{
+  width:100%;
+  padding:10px;
+  margin:5px 0;
+}
+
+.hero{
+  text-align:center;
+  padding:40px;
+}
+
+</style>
+</head>
+
+<body>
+
+<nav>
+  <div><strong>MJ Property</strong></div>
+  <div>
+    <a href="#">Home</a>
+    <a href="#cart">Cart (<span id="cartCount">0</span>)</a>
+  </div>
+</nav>
+
+<div id="app" class="container"></div>
+
+<script>
+
+// CONFIG
+const CONFIG = {
+  storeName:"MJ Property",
+  tagline:"Top Luxury Properties in India",
+  currency:"₹",
+  formspree:"https://formspree.io/f/your-url"
+};
+
+// PROJECT DATA (EDIT HERE)
+const projects = [
+{
+id:1,
+name:"DLF Luxury Villa",
+builder:"DLF",
+price:50000000,
+category:"dlf",
+description:"Premium villa with luxury amenities",
+images:["https://picsum.photos/400/300?1"],
+stock:5
+},
+{
+id:2,
+name:"Godrej Premium Flats",
+builder:"Godrej",
+price:30000000,
+category:"godrej",
+description:"Modern flats in prime location",
+images:["https://picsum.photos/400/300?2"],
+stock:8
+}
+];
+
+// CART
+function getCart(){
+  return JSON.parse(localStorage.getItem("neo_cart")) || [];
+}
+
+function saveCart(cart){
+  localStorage.setItem("neo_cart",JSON.stringify(cart));
+  updateCartCount();
+}
+
+function updateCartCount(){
+  let cart = getCart();
+  document.getElementById("cartCount").innerText = cart.length;
+}
+
+// ROUTER
+window.addEventListener("hashchange",render);
+window.addEventListener("load",render);
+
+function render(){
+  const hash = location.hash;
+
+  if(hash.startsWith("#project")){
+    const id = parseInt(hash.split("=")[1]);
+    renderProject(id);
+  }else if(hash === "#cart"){
+    renderCart();
+  }else if(hash === "#checkout"){
+    renderCheckout();
+  }else{
+    renderHome();
+  }
+}
+
+// HOME
+function renderHome(){
+  let html = `
+  <div class="hero">
+    <h1>${CONFIG.storeName}</h1>
+    <p>${CONFIG.tagline}</p>
+  </div>
+
+  <div class="grid">
+  ${projects.map(p=>`
+    <div class="card">
+      <img src="${p.images[0]}">
+      <div style="padding:10px">
+        <h3>${p.name}</h3>
+        <p>${CONFIG.currency}${p.price}</p>
+        <button class="btn" onclick="addToCart(${p.id});event.stopPropagation();">
+          ${inCart(p.id) ? "In Cart ✓" : "Add to Cart"}
+        </button>
+      </div>
+      <div onclick="location.hash='#project=${p.id}'"></div>
+    </div>
+  `).join("")}
+  </div>
+  `;
+
+  app.innerHTML = html;
+}
+
+// PROJECT PAGE
+function renderProject(id){
+  const p = projects.find(x=>x.id===id);
+
+  let html = `
+  <h2>${p.name}</h2>
+  <img src="${p.images[0]}" width="100%">
+  <p>${p.description}</p>
+  <p><strong>${CONFIG.currency}${p.price}</strong></p>
+
+  <input type="number" id="qty" value="1" min="1">
+
+  <button class="btn" onclick="addToCart(${p.id})">Add to Cart</button>
+  `;
+
+  app.innerHTML = html;
+}
+
+// CART
+function renderCart(){
+  let cart = getCart();
+
+  let html = `<h2>Cart</h2>`;
+
+  let total = 0;
+
+  cart.forEach(item=>{
+    let p = projects.find(x=>x.id===item.id);
+    total += p.price * item.qty;
+
+    html += `
+      <p>${p.name} x ${item.qty}</p>
+    `;
+  });
+
+  html += `<h3>Total: ${CONFIG.currency}${total}</h3>`;
+  html += `<button class="btn" onclick="location.hash='#checkout'">Checkout</button>`;
+
+  app.innerHTML = html;
+}
+
+// CHECKOUT
+function renderCheckout(){
+  let cart = getCart();
+
+  let html = `
+  <h2>Checkout</h2>
+  <form onsubmit="submitOrder(event)">
+    <input placeholder="Name" required>
+    <input placeholder="Email" required>
+    <input placeholder="Phone" required>
+    <textarea placeholder="Address"></textarea>
+    <textarea placeholder="Notes"></textarea>
+    <button class="btn">Place Order</button>
+  </form>
+  `;
+
+  app.innerHTML = html;
+}
+
+function submitOrder(e){
+  e.preventDefault();
+
+  fetch(CONFIG.formspree,{
+    method:"POST",
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(getCart())
+  });
+
+  alert("Order Placed!");
+  localStorage.removeItem("neo_cart");
+  location.hash="";
+}
+
+// ADD TO CART
+function addToCart(id){
+  let cart = getCart();
+  let item = cart.find(x=>x.id===id);
+
+  if(item){
+    item.qty++;
+  }else{
+    cart.push({id,qty:1});
+  }
+
+  saveCart(cart);
+  render();
+}
+
+function inCart(id){
+  return getCart().some(x=>x.id===id);
+}
+
+</script>
+
+</body>
+  </html>
